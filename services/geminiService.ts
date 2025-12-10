@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_PROMPT, MODEL_NAME } from "../constants";
 import { AnalysisResult } from "../types";
@@ -35,6 +33,14 @@ STRICT DATA RULES:
 - **SOURCE MATERIAL**: Use \`SAMPLE TEXT\` ONLY for Style, Tone, and Structure analysis. Treat its specific content (names, dates, locations) as meaningless placeholders.
 - **FACTUAL SOURCE**: Use \`NEW TASK\` (Topic + Context Info) as the ONLY source for facts, names, data, and events.
 - **PROHIBITED**: Do not copy any entities (people, places, specific events, numbers) from the SAMPLE TEXT to the NEW ARTICLE.
+
+FORMATTING REQUIREMENTS (VISUAL HEADERS):
+- You MUST label every section clearly using Markdown Headers:
+  1. \`## INTRODUCTION\`
+  2. \`## BODY - PART 1: [Brief Title]\`
+  3. \`## BODY - PART 2: [Brief Title]\` (and so on...)
+  4. \`## CONCLUSION\`
+- Do not write a continuous block of text. Break it down with these headers.
 
 EXECUTION ORDER:
 1. Analyze the SAMPLE TEXT to extract the Style JSON.

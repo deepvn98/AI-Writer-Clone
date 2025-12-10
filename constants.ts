@@ -55,6 +55,15 @@ BƯỚC 2: THỰC THI BÀI VIẾT MỚI (CONTENT GENERATION)
      - Coi nội dung bài mẫu là văn bản vô nghĩa (Lorem Ipsum).
      - **CHỈ DÙNG** thông tin từ phần "3. Thông tin bổ sung / Dàn ý (Context)" để làm dữ liệu cho bài viết mới.
      - Nếu Context thiếu thông tin, hãy sáng tạo nội dung mới phù hợp với Topic, nhưng không được trùng lặp với dữ liệu của bài mẫu.
+  4. **VISUAL NAVIGATION (HIỂN THỊ CHỈ MỤC)**:
+     - Bài viết mới phải có các tiêu đề rõ ràng để người đọc dễ theo dõi.
+     - Sử dụng định dạng Markdown Header (##).
+     - BẮT BUỘC PHẢI CÓ CÁC PHẦN:
+       - \`## INTRODUCTION\`
+       - \`## BODY - PART 1: [Tiêu đề mô tả nội dung]\`
+       - \`## BODY - PART 2: [Tiêu đề mô tả nội dung]\`
+       - ... (Tiếp tục cho các phần Body khác) ...
+       - \`## CONCLUSION\`
 
 ĐỊNH DẠNG ĐẦU RA (OUTPUT FORMAT):
 Hãy trả về kết quả theo đúng định dạng sau:
@@ -65,7 +74,7 @@ Hãy trả về kết quả theo đúng định dạng sau:
 \`\`\`
 
 [BÀI VIẾT MỚI]
-... nội dung bài viết ...
+... nội dung bài viết (có các tiêu đề ## INTRODUCTION, ## BODY..., ## CONCLUSION) ...
 `;
 
 export const MODEL_NAME = "gemini-2.5-flash";
