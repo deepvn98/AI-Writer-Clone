@@ -1,45 +1,47 @@
 
+
 import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_PROMPT, MODEL_NAME } from "../constants";
 import { AnalysisResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateCloneContent = async (
+  apiKey: string,
   sampleText: string,
   newTopic: string,
   contextInfo: string = ""
 ): Promise<AnalysisResult> => {
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please provide a valid Google Gemini API Key.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   try {
     const prompt = `
-NHIỆM VỤ: VIẾT BÀI MỚI DÙNG "STYLE" CỦA BÀI MẪU NHƯNG DÙNG "DATA" CỦA INPUT.
-
-1. BÀI MẪU (STYLE SOURCE ONLY - IGNORE CONTENT):
+INPUT DATA:
+1. SAMPLE TEXT (MẪU - ONLY FOR STYLE ANALYSIS):
 """
 ${sampleText}
 """
-*(Chỉ phân tích cách viết, không dùng thông tin/sự kiện từ bài này)*
 
-2. DỮ LIỆU BÀI MỚI (CONTENT SOURCE OF TRUTH):
-- Chủ đề: ${newTopic}
-- Dữ liệu chi tiết/Dàn ý (Context Info): 
+2. NEW TASK:
+- Topic: ${newTopic}
+- Context Info (THE ONLY SOURCE OF TRUTH FOR DATA): 
 """
-${contextInfo ? contextInfo : "Không có dữ liệu cụ thể, hãy phát triển nội dung dựa trên kiến thức chung chính xác về chủ đề này."}
+${contextInfo ? contextInfo : "No specific context provided. Use general knowledge consistent with the topic, but DO NOT copy facts from Sample Text."}
 """
-*(Đây là nguồn thông tin duy nhất. Nếu có số liệu/tên riêng ở đây, BẮT BUỘC phải đưa vào bài viết)*
 
-3. YÊU CẦU CẤU TRÚC (VISIBILITY - STRICT):
-- **FULL SEGMENTATION**: Bài viết bắt buộc phải có tiêu đề cho TẤT CẢ các phần:
-  1. **INTRODUCTION** (Phải có tiêu đề này)
-  2. **Part 1, Part 2...** (Body chia nhỏ có tiêu đề chức năng)
-  3. **CONCLUSION** (Phải có tiêu đề này)
-- **Structure**: Số lượng câu/đoạn phải tương đương bài mẫu.
+STRICT DATA RULES:
+- **SOURCE MATERIAL**: Use \`SAMPLE TEXT\` ONLY for Style, Tone, and Structure analysis. Treat its specific content (names, dates, locations) as meaningless placeholders.
+- **FACTUAL SOURCE**: Use \`NEW TASK\` (Topic + Context Info) as the ONLY source for facts, names, data, and events.
+- **PROHIBITED**: Do not copy any entities (people, places, specific events, numbers) from the SAMPLE TEXT to the NEW ARTICLE.
 
-4. YÊU CẦU KIỂM SOÁT DỮ LIỆU (DATA CONTROL):
-- **CẤM**: Không nhắc đến bất kỳ nhân vật, địa điểm, con số nào của bài mẫu (Mục 1) trong bài viết mới.
-- **BẮT BUỘC**: Mọi thông tin trong bài viết mới phải dựa trên Mục 2. Không bịa đặt số liệu nếu không có trong Mục 2.
+EXECUTION ORDER:
+1. Analyze the SAMPLE TEXT to extract the Style JSON.
+2. Construct the \`STYLE_DNA_JSON\` object.
+3. Write the NEW ARTICLE in English. Ensure the content is derived 100% from the NEW TASK and 0% from the SAMPLE TEXT's facts.
 
-HÃY BẮT ĐẦU VỚI [PHÂN TÍCH PHONG CÁCH], SAU ĐÓ LÀ BẢNG BLUEPRINT, VÀ CUỐI CÙNG LÀ [BÀI VIẾT MỚI].
+REMEMBER: The new article's length must match the sample's length defined in the JSON.
 `;
 
     const response = await ai.models.generateContent({
@@ -47,45 +49,47 @@ HÃY BẮT ĐẦU VỚI [PHÂN TÍCH PHONG CÁCH], SAU ĐÓ LÀ BẢNG BLUEPRINT
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_PROMPT,
-        temperature: 0.5, // Giảm temperature để AI bám sát dữ liệu thật (context info) hơn, bớt sáng tạo lung tung
+        temperature: 0.7, 
       },
     });
 
     const rawText = response.text || "";
 
-    // Parse the output based on the tags defined in the system prompt
-    const analysisTag = "[PHÂN TÍCH PHONG CÁCH]";
+    // Parse the output based on the tags
+    const jsonTag = "[STYLE_DNA_JSON]";
     const contentTag = "[BÀI VIẾT MỚI]";
 
     let analysis = "";
     let generatedContent = "";
 
-    const analysisIndex = rawText.indexOf(analysisTag);
+    const jsonIndex = rawText.indexOf(jsonTag);
     const contentIndex = rawText.indexOf(contentTag);
 
-    if (analysisIndex !== -1 && contentIndex !== -1) {
-      analysis = rawText
-        .substring(analysisIndex + analysisTag.length, contentIndex)
-        .trim();
-      generatedContent = rawText
-        .substring(contentIndex + contentTag.length)
-        .trim();
-    } else {
-      // Fallback if tags are missing, just treat everything as content or try best guess
-      if (analysisIndex !== -1) {
-          analysis = rawText.substring(analysisIndex + analysisTag.length).trim();
-      } else {
-          generatedContent = rawText;
-      }
+    // Extract JSON part
+    if (jsonIndex !== -1) {
+      const endOfJson = contentIndex !== -1 ? contentIndex : rawText.length;
+      let jsonString = rawText.substring(jsonIndex + jsonTag.length, endOfJson).trim();
+      
+      // Clean up markdown code blocks if present to make it look nice in UI
+      // We keep the code block markers for display in the "Analysis" sidebar so it looks like code
+      analysis = jsonString;
+    }
+
+    // Extract Content part
+    if (contentIndex !== -1) {
+      generatedContent = rawText.substring(contentIndex + contentTag.length).trim();
+    } else if (jsonIndex === -1) {
+      // Fallback: if no tags found, assume everything is content
+      generatedContent = rawText;
     }
 
     return {
       raw: rawText,
-      analysis,
+      analysis: analysis || "Could not extract Style DNA JSON.",
       generatedContent,
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error("Không thể kết nối với AI. Vui lòng thử lại sau.");
+    throw new Error("Không thể kết nối với AI. Vui lòng kiểm tra API Key hoặc thử lại sau.");
   }
 };

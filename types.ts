@@ -1,5 +1,6 @@
+
 export interface AnalysisResult {
-  analysis: string;
+  analysis: string; // This will now contain the JSON string
   generatedContent: string;
   raw: string;
 }
@@ -15,4 +16,13 @@ export interface AppState {
 export enum ViewMode {
   INPUT = 'INPUT',
   RESULT = 'RESULT'
+}
+
+export type KeyStatus = 'active' | 'quota_exceeded' | 'error';
+
+export interface ApiKeyData {
+  key: string;
+  label?: string; // Tên gợi nhớ (Key 1, Key dự phòng...)
+  status: KeyStatus;
+  lastUsed?: number;
 }
